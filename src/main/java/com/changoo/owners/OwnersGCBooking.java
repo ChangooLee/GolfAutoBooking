@@ -46,7 +46,7 @@ public class OwnersGCBooking {
     	    	//아침 8시 59분 55초부터 예약 시작, 8시 0, 8, 15, 23, 30, 38, 45, 53분 티옵만 노리며 실패 시 1초 대기 후 재시도
     	    		
     	    	//if(iTime > 85955) {
-    	    	if(iTime > 85955) {
+    	    	//if(iTime > 85955) {
 					Connection.Response loginPageResponse = Jsoup.connect("https://www.ownersgc.co.kr/html/member/login.asp")
 		                    //.timeout(3000)
 		                    .header("Accept", "text/html, application/xhtml+xml, image/jxr, */*")
@@ -156,7 +156,7 @@ public class OwnersGCBooking {
 		        	String sMonth = sLastBookingElement.substring(sLastBookingElement.indexOf("JavaScript:Date_Click('")+30,sLastBookingElement.indexOf("JavaScript:Date_Click('")+32);
 		        	String sDate = sLastBookingElement.substring(sLastBookingElement.indexOf("JavaScript:Date_Click('")+35,sLastBookingElement.indexOf("JavaScript:Date_Click('")+37);
 			        sNextWeek = sYear + sMonth + sDate;
-			        //sNextWeek = "20220227";
+			        //sNextWeek = "20220302";
 			        for(int i=0; i < eBookingElementsList.size(); i++) {
 			        	String sBookingDate = eBookingElementsList.get(i).toString();
 			        	sYear = sBookingDate.substring(sBookingDate.indexOf("JavaScript:Date_Click('")+23,sBookingDate.indexOf("JavaScript:Date_Click('")+27);
@@ -197,62 +197,282 @@ public class OwnersGCBooking {
 			    				 <a href="JavaScript:Book_Confirm1('20220204','금','1', 'HILL','1152');"><span class="reservation_button_2">18홀예약</span></a>
 			    				</div>
 			    				*/
-			    				Element eRevElement = eRevElementsList.get(0);
-			    				String sRevElementTemp = eRevElement.toString();
-			    				String[] sRevElement = sRevElementTemp.substring(sRevElementTemp.indexOf("Confirm1(")+9, sRevElementTemp.indexOf(");\"")).split(",");
-			    				//function Book_Confirm1 (i_date, i_week,  i_crs, i_crs_name, i_time) {
-			    				/*
-									obj.book_date_a.value = i_date;
-									obj.book_crs.value = i_crs;
-									obj.book_crs_name.value = i_crs_name;
-									obj.book_time.value = i_time;
-									obj.action = 'reservation_01_02.asp';
-			    				 */
-			    				data = new HashMap<String, String>();
-				    			data.put("book_date_a", sRevElement[0].replaceAll("'", ""));
-				    			data.put("book_crs", sRevElement[2].replaceAll("'", ""));
-				    			data.put("book_crs_name", sRevElement[3].replaceAll("'", ""));
-				    			data.put("book_time", sRevElement[4].replaceAll("'", ""));	
-				    			
-				    			Document reserveCompleteDocument = Jsoup.connect("https://www.ownersgc.co.kr/html/reservation/reservation_01_02.asp")
-				                        .header("Accept", "text/html, application/xhtml+xml, image/jxr, */*")
-				                        .header("Referer", "https://www.ownersgc.co.kr/html/reservation/reservation_01_01.asp")
-				                        .header("Accept-Language", "ko-KR")
-				                        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; WOW64; Trident/7.0; rv:11.0) like Gecko")
-				                        .header("Accept-Encoding", "gzip, deflate")
-				                        .header("Host", "www.ownersgc.co.kr")
-				                        .header("Connection", "Keep-Alive")
-				                        .cookies(loginCookie) // 위에서 얻은 '로그인 된' 쿠키
-				                        .data(data)
-				    				    .post();
-				    			
-				    			reserveCompleteDocument = Jsoup.connect("https://www.ownersgc.co.kr/html/reservation/reservation_01_03.asp")
-				                        .header("Accept", "text/html, application/xhtml+xml, image/jxr, */*")
-				                        .header("Referer", "https://www.ownersgc.co.kr/html/reservation/reservation_01_02.asp")
-				                        .header("Accept-Language", "ko-KR")
-				                        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; WOW64; Trident/7.0; rv:11.0) like Gecko")
-				                        .header("Accept-Encoding", "gzip, deflate")
-				                        .header("Host", "www.ownersgc.co.kr")
-				                        .header("Connection", "Keep-Alive")
-				                        .cookies(loginCookie) // 위에서 얻은 '로그인 된' 쿠키
-				                        .data(data)
-				    				    .post();
-				    			System.out.println(reserveCompleteDocument);
-				    			sendMail(sPossibleBookingDate, sRevElement[4].replaceAll("'", ""), sRevElement[3].replaceAll("'", ""), reserveCompleteDocument.toString());
-				    			bNotFinish = false;
-				    			bSucc = true;
-				    			break;
+			    				//08시 가까운순 예약
+			    				for(int k=0; k < eRevElementsList.size(); k++) {
+				    				Element eRevElement = eRevElementsList.get(k);
+				    				String sRevElementTemp = eRevElement.toString();
+				    				String[] sRevElement = sRevElementTemp.substring(sRevElementTemp.indexOf("Confirm1(")+9, sRevElementTemp.indexOf(");\"")).split(",");
+				    				//function Book_Confirm1 (i_date, i_week,  i_crs, i_crs_name, i_time) {
+				    				/*
+										obj.book_date_a.value = i_date;
+										obj.book_crs.value = i_crs;
+										obj.book_crs_name.value = i_crs_name;
+										obj.book_time.value = i_time;
+										obj.action = 'reservation_01_02.asp';
+				    				 */
+				    				String sBookingTime = sRevElement[4].substring(1, 3);
+				    				if(sBookingTime.equals("08")) {
+					    				data = new HashMap<String, String>();
+						    			data.put("book_date_a", sRevElement[0].replaceAll("'", ""));
+						    			data.put("book_crs", sRevElement[2].replaceAll("'", ""));
+						    			data.put("book_crs_name", sRevElement[3].replaceAll("'", ""));
+						    			data.put("book_time", sRevElement[4].replaceAll("'", ""));	
+						    			
+						    			Document reserveCompleteDocument = Jsoup.connect("https://www.ownersgc.co.kr/html/reservation/reservation_01_02.asp")
+						                        .header("Accept", "text/html, application/xhtml+xml, image/jxr, */*")
+						                        .header("Referer", "https://www.ownersgc.co.kr/html/reservation/reservation_01_01.asp")
+						                        .header("Accept-Language", "ko-KR")
+						                        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; WOW64; Trident/7.0; rv:11.0) like Gecko")
+						                        .header("Accept-Encoding", "gzip, deflate")
+						                        .header("Host", "www.ownersgc.co.kr")
+						                        .header("Connection", "Keep-Alive")
+						                        .cookies(loginCookie) // 위에서 얻은 '로그인 된' 쿠키
+						                        .data(data)
+						    				    .post();
+						    			
+						    			reserveCompleteDocument = Jsoup.connect("https://www.ownersgc.co.kr/html/reservation/reservation_01_03.asp")
+						                        .header("Accept", "text/html, application/xhtml+xml, image/jxr, */*")
+						                        .header("Referer", "https://www.ownersgc.co.kr/html/reservation/reservation_01_02.asp")
+						                        .header("Accept-Language", "ko-KR")
+						                        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; WOW64; Trident/7.0; rv:11.0) like Gecko")
+						                        .header("Accept-Encoding", "gzip, deflate")
+						                        .header("Host", "www.ownersgc.co.kr")
+						                        .header("Connection", "Keep-Alive")
+						                        .cookies(loginCookie) // 위에서 얻은 '로그인 된' 쿠키
+						                        .data(data)
+						    				    .post();
+						    			System.out.println(reserveCompleteDocument);
+						    			sendMail(sPossibleBookingDate, sRevElement[4].replaceAll("'", ""), sRevElement[3].replaceAll("'", ""), reserveCompleteDocument.toString());
+						    			bNotFinish = false;
+						    			bSucc = true;
+						    			break;
+				    				}				    				
+			    				}
+			    				//09시 가까운순 예약
+			    				for(int k=0; k < eRevElementsList.size(); k++) {
+				    				Element eRevElement = eRevElementsList.get(k);
+				    				String sRevElementTemp = eRevElement.toString();
+				    				String[] sRevElement = sRevElementTemp.substring(sRevElementTemp.indexOf("Confirm1(")+9, sRevElementTemp.indexOf(");\"")).split(",");
+				    				//function Book_Confirm1 (i_date, i_week,  i_crs, i_crs_name, i_time) {
+				    				/*
+										obj.book_date_a.value = i_date;
+										obj.book_crs.value = i_crs;
+										obj.book_crs_name.value = i_crs_name;
+										obj.book_time.value = i_time;
+										obj.action = 'reservation_01_02.asp';
+				    				 */
+				    				String sBookingTime = sRevElement[4].substring(1, 3);
+				    				
+				    				if(sBookingTime.equals("09")) {
+					    				data = new HashMap<String, String>();
+						    			data.put("book_date_a", sRevElement[0].replaceAll("'", ""));
+						    			data.put("book_crs", sRevElement[2].replaceAll("'", ""));
+						    			data.put("book_crs_name", sRevElement[3].replaceAll("'", ""));
+						    			data.put("book_time", sRevElement[4].replaceAll("'", ""));	
+						    			
+						    			Document reserveCompleteDocument = Jsoup.connect("https://www.ownersgc.co.kr/html/reservation/reservation_01_02.asp")
+						                        .header("Accept", "text/html, application/xhtml+xml, image/jxr, */*")
+						                        .header("Referer", "https://www.ownersgc.co.kr/html/reservation/reservation_01_01.asp")
+						                        .header("Accept-Language", "ko-KR")
+						                        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; WOW64; Trident/7.0; rv:11.0) like Gecko")
+						                        .header("Accept-Encoding", "gzip, deflate")
+						                        .header("Host", "www.ownersgc.co.kr")
+						                        .header("Connection", "Keep-Alive")
+						                        .cookies(loginCookie) // 위에서 얻은 '로그인 된' 쿠키
+						                        .data(data)
+						    				    .post();
+						    			
+						    			reserveCompleteDocument = Jsoup.connect("https://www.ownersgc.co.kr/html/reservation/reservation_01_03.asp")
+						                        .header("Accept", "text/html, application/xhtml+xml, image/jxr, */*")
+						                        .header("Referer", "https://www.ownersgc.co.kr/html/reservation/reservation_01_02.asp")
+						                        .header("Accept-Language", "ko-KR")
+						                        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; WOW64; Trident/7.0; rv:11.0) like Gecko")
+						                        .header("Accept-Encoding", "gzip, deflate")
+						                        .header("Host", "www.ownersgc.co.kr")
+						                        .header("Connection", "Keep-Alive")
+						                        .cookies(loginCookie) // 위에서 얻은 '로그인 된' 쿠키
+						                        .data(data)
+						    				    .post();
+						    			System.out.println(reserveCompleteDocument);
+						    			sendMail(sPossibleBookingDate, sRevElement[4].replaceAll("'", ""), sRevElement[3].replaceAll("'", ""), reserveCompleteDocument.toString());
+						    			bNotFinish = false;
+						    			bSucc = true;
+						    			break;
+				    				}
+			    				}
+			    				//07시 가까운순 예약
+			    				for(int k=0; k < eRevElementsList.size(); k++) {
+				    				Element eRevElement = eRevElementsList.get(k);
+				    				String sRevElementTemp = eRevElement.toString();
+				    				String[] sRevElement = sRevElementTemp.substring(sRevElementTemp.indexOf("Confirm1(")+9, sRevElementTemp.indexOf(");\"")).split(",");
+				    				//function Book_Confirm1 (i_date, i_week,  i_crs, i_crs_name, i_time) {
+				    				/*
+										obj.book_date_a.value = i_date;
+										obj.book_crs.value = i_crs;
+										obj.book_crs_name.value = i_crs_name;
+										obj.book_time.value = i_time;
+										obj.action = 'reservation_01_02.asp';
+				    				 */
+				    				String sBookingTime = sRevElement[4].substring(1, 3);
+				    				
+				    				//07시 가까운순 예약
+				    				if(sBookingTime.equals("07")) {
+					    				data = new HashMap<String, String>();
+						    			data.put("book_date_a", sRevElement[0].replaceAll("'", ""));
+						    			data.put("book_crs", sRevElement[2].replaceAll("'", ""));
+						    			data.put("book_crs_name", sRevElement[3].replaceAll("'", ""));
+						    			data.put("book_time", sRevElement[4].replaceAll("'", ""));	
+						    			
+						    			Document reserveCompleteDocument = Jsoup.connect("https://www.ownersgc.co.kr/html/reservation/reservation_01_02.asp")
+						                        .header("Accept", "text/html, application/xhtml+xml, image/jxr, */*")
+						                        .header("Referer", "https://www.ownersgc.co.kr/html/reservation/reservation_01_01.asp")
+						                        .header("Accept-Language", "ko-KR")
+						                        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; WOW64; Trident/7.0; rv:11.0) like Gecko")
+						                        .header("Accept-Encoding", "gzip, deflate")
+						                        .header("Host", "www.ownersgc.co.kr")
+						                        .header("Connection", "Keep-Alive")
+						                        .cookies(loginCookie) // 위에서 얻은 '로그인 된' 쿠키
+						                        .data(data)
+						    				    .post();
+						    			
+						    			reserveCompleteDocument = Jsoup.connect("https://www.ownersgc.co.kr/html/reservation/reservation_01_03.asp")
+						                        .header("Accept", "text/html, application/xhtml+xml, image/jxr, */*")
+						                        .header("Referer", "https://www.ownersgc.co.kr/html/reservation/reservation_01_02.asp")
+						                        .header("Accept-Language", "ko-KR")
+						                        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; WOW64; Trident/7.0; rv:11.0) like Gecko")
+						                        .header("Accept-Encoding", "gzip, deflate")
+						                        .header("Host", "www.ownersgc.co.kr")
+						                        .header("Connection", "Keep-Alive")
+						                        .cookies(loginCookie) // 위에서 얻은 '로그인 된' 쿠키
+						                        .data(data)
+						    				    .post();
+						    			System.out.println(reserveCompleteDocument);
+						    			sendMail(sPossibleBookingDate, sRevElement[4].replaceAll("'", ""), sRevElement[3].replaceAll("'", ""), reserveCompleteDocument.toString());
+						    			bNotFinish = false;
+						    			bSucc = true;
+						    			break;
+				    				}
+			    				}
+			    				//06시 가까운순 예약
+			    				for(int k=0; k < eRevElementsList.size(); k++) {
+				    				Element eRevElement = eRevElementsList.get(k);
+				    				String sRevElementTemp = eRevElement.toString();
+				    				String[] sRevElement = sRevElementTemp.substring(sRevElementTemp.indexOf("Confirm1(")+9, sRevElementTemp.indexOf(");\"")).split(",");
+				    				//function Book_Confirm1 (i_date, i_week,  i_crs, i_crs_name, i_time) {
+				    				/*
+										obj.book_date_a.value = i_date;
+										obj.book_crs.value = i_crs;
+										obj.book_crs_name.value = i_crs_name;
+										obj.book_time.value = i_time;
+										obj.action = 'reservation_01_02.asp';
+				    				 */
+				    				String sBookingTime = sRevElement[4].substring(1, 3);
+				    				if(sBookingTime.equals("06")) {
+					    				data = new HashMap<String, String>();
+						    			data.put("book_date_a", sRevElement[0].replaceAll("'", ""));
+						    			data.put("book_crs", sRevElement[2].replaceAll("'", ""));
+						    			data.put("book_crs_name", sRevElement[3].replaceAll("'", ""));
+						    			data.put("book_time", sRevElement[4].replaceAll("'", ""));	
+						    			
+						    			Document reserveCompleteDocument = Jsoup.connect("https://www.ownersgc.co.kr/html/reservation/reservation_01_02.asp")
+						                        .header("Accept", "text/html, application/xhtml+xml, image/jxr, */*")
+						                        .header("Referer", "https://www.ownersgc.co.kr/html/reservation/reservation_01_01.asp")
+						                        .header("Accept-Language", "ko-KR")
+						                        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; WOW64; Trident/7.0; rv:11.0) like Gecko")
+						                        .header("Accept-Encoding", "gzip, deflate")
+						                        .header("Host", "www.ownersgc.co.kr")
+						                        .header("Connection", "Keep-Alive")
+						                        .cookies(loginCookie) // 위에서 얻은 '로그인 된' 쿠키
+						                        .data(data)
+						    				    .post();
+						    			
+						    			reserveCompleteDocument = Jsoup.connect("https://www.ownersgc.co.kr/html/reservation/reservation_01_03.asp")
+						                        .header("Accept", "text/html, application/xhtml+xml, image/jxr, */*")
+						                        .header("Referer", "https://www.ownersgc.co.kr/html/reservation/reservation_01_02.asp")
+						                        .header("Accept-Language", "ko-KR")
+						                        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; WOW64; Trident/7.0; rv:11.0) like Gecko")
+						                        .header("Accept-Encoding", "gzip, deflate")
+						                        .header("Host", "www.ownersgc.co.kr")
+						                        .header("Connection", "Keep-Alive")
+						                        .cookies(loginCookie) // 위에서 얻은 '로그인 된' 쿠키
+						                        .data(data)
+						    				    .post();
+						    			System.out.println(reserveCompleteDocument);
+						    			sendMail(sPossibleBookingDate, sRevElement[4].replaceAll("'", ""), sRevElement[3].replaceAll("'", ""), reserveCompleteDocument.toString());
+						    			bNotFinish = false;
+						    			bSucc = true;
+						    			break;
+				    				}
+			    				}
+			    				//그 외
+			    				for(int k=0; k < eRevElementsList.size(); k++) {
+				    				Element eRevElement = eRevElementsList.get(k);
+				    				String sRevElementTemp = eRevElement.toString();
+				    				String[] sRevElement = sRevElementTemp.substring(sRevElementTemp.indexOf("Confirm1(")+9, sRevElementTemp.indexOf(");\"")).split(",");
+				    				//function Book_Confirm1 (i_date, i_week,  i_crs, i_crs_name, i_time) {
+				    				/*
+										obj.book_date_a.value = i_date;
+										obj.book_crs.value = i_crs;
+										obj.book_crs_name.value = i_crs_name;
+										obj.book_time.value = i_time;
+										obj.action = 'reservation_01_02.asp';
+				    				 */
+				    				String sBookingTime = sRevElement[4].substring(1, 3);
+				    				data = new HashMap<String, String>();
+					    			data.put("book_date_a", sRevElement[0].replaceAll("'", ""));
+					    			data.put("book_crs", sRevElement[2].replaceAll("'", ""));
+					    			data.put("book_crs_name", sRevElement[3].replaceAll("'", ""));
+					    			data.put("book_time", sRevElement[4].replaceAll("'", ""));	
+					    			
+					    			Document reserveCompleteDocument = Jsoup.connect("https://www.ownersgc.co.kr/html/reservation/reservation_01_02.asp")
+					                        .header("Accept", "text/html, application/xhtml+xml, image/jxr, */*")
+					                        .header("Referer", "https://www.ownersgc.co.kr/html/reservation/reservation_01_01.asp")
+					                        .header("Accept-Language", "ko-KR")
+					                        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; WOW64; Trident/7.0; rv:11.0) like Gecko")
+					                        .header("Accept-Encoding", "gzip, deflate")
+					                        .header("Host", "www.ownersgc.co.kr")
+					                        .header("Connection", "Keep-Alive")
+					                        .cookies(loginCookie) // 위에서 얻은 '로그인 된' 쿠키
+					                        .data(data)
+					    				    .post();
+					    			
+					    			reserveCompleteDocument = Jsoup.connect("https://www.ownersgc.co.kr/html/reservation/reservation_01_03.asp")
+					                        .header("Accept", "text/html, application/xhtml+xml, image/jxr, */*")
+					                        .header("Referer", "https://www.ownersgc.co.kr/html/reservation/reservation_01_02.asp")
+					                        .header("Accept-Language", "ko-KR")
+					                        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; WOW64; Trident/7.0; rv:11.0) like Gecko")
+					                        .header("Accept-Encoding", "gzip, deflate")
+					                        .header("Host", "www.ownersgc.co.kr")
+					                        .header("Connection", "Keep-Alive")
+					                        .cookies(loginCookie) // 위에서 얻은 '로그인 된' 쿠키
+					                        .data(data)
+					    				    .post();
+					    			System.out.println(reserveCompleteDocument);
+					    			sendMail(sPossibleBookingDate, sRevElement[4].replaceAll("'", ""), sRevElement[3].replaceAll("'", ""), reserveCompleteDocument.toString());
+					    			bNotFinish = false;
+					    			bSucc = true;
+					    			break;
+			    				}
+			    				if(bSucc == true) {
+			    					break;
+			    				}
 			    			}
 			        	}
 			        }
 			        int iRandom = (int) (Math.round(Math.random()*1000));
-			        System.out.println("All available booking date has reserved... trying again in " +iRandom*2 + "ms...");
+
+		        	//현재시간 구하기 로직 : 컴퓨터 시간임, 따라서 최대한 서버 시간과 맞아야 함, 내 컴퓨터는 거의 동기화 되어있는듯
+	    	    	SimpleDateFormat logFormat = new SimpleDateFormat ( "yyyyMMdd HH:mm:ss");
+	    	    	Date dLog = new Date();	    			
+	    	    	String sLogTime = logFormat.format(dLog);
+			        System.out.println("["+sLogTime+"] All available booking date has reserved... trying again in " +iRandom*2 + "ms...");
 			        Thread.sleep(iRandom*2);
     	    	}
-	        }
+	        //}
 			
 		} catch (Exception e){
 			System.err.println(e.toString());
+			runBooking();
 			return bSucc;
 		} finally {
 			return bSucc;
