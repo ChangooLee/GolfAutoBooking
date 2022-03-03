@@ -459,14 +459,14 @@ public class OwnersGCBooking {
 			    			}
 			        	}
 			        }
-			        int iRandom = (int) (Math.round(Math.random()*1000));
+			        int iRandom = (int) (Math.round(Math.random()*100));
 
 		        	//현재시간 구하기 로직 : 컴퓨터 시간임, 따라서 최대한 서버 시간과 맞아야 함, 내 컴퓨터는 거의 동기화 되어있는듯
 	    	    	SimpleDateFormat logFormat = new SimpleDateFormat ( "yyyyMMdd HH:mm:ss");
 	    	    	Date dLog = new Date();	    			
 	    	    	String sLogTime = logFormat.format(dLog);
-			        System.out.println("["+sLogTime+"] All available booking date has reserved... trying again in " +iRandom*2 + "ms...");
-			        Thread.sleep(iRandom*2);
+			        System.out.println("["+sLogTime+"] All available booking date has reserved... trying again in " +iRandom + "ms...");
+			        Thread.sleep(iRandom);
     	    	}
 	        //}
 			

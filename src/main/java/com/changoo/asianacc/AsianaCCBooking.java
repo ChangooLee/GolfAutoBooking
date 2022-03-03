@@ -7,7 +7,16 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.Properties;
 import java.util.regex.Pattern;
+
+import javax.mail.Message;
+import javax.mail.MessagingException;
+import javax.mail.PasswordAuthentication;
+import javax.mail.Session;
+import javax.mail.Transport;
+import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeMessage;
 
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
@@ -38,7 +47,7 @@ class Thread4p1 extends Thread {
     		//ex) AsianaCCBooking.bookAsianaCC40daysFromNow(주중주말, 목표티옵시간, 목표 날짜-지워버리면 예약 가능한 마지막 날짜 예약)
     		//ex) System.out.println(AsianaCCBooking.bookAsianaCC40daysFromNow(false, "08", ""));  <<이렇게 하면 자동 예약됨
     		//ex) System.out.println(AsianaCCBooking.bookAsianaCC40daysFromNow(false, "08", "20220311"));  <<이렇게 하면 주중 주말 무시하고 해당 일자 시간에 예약됨
-			System.out.println(AsianaCCBooking.bookAsianaCC40daysFromNow(false, "08", "20220311"));
+			System.out.println(AsianaCCBooking.bookAsianaCC40daysFromNow(false, "09", "20220406"));
 		} catch (InterruptedException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -75,7 +84,7 @@ public class AsianaCCBooking
     	    	//아침 8시 59분 55초부터 예약 시작, 8시 0, 8, 15, 23, 30, 38, 45, 53분 티옵만 노리며 실패 시 1초 대기 후 재시도
     	    		
     	    	//if(iTime > 85955) {
-    	    	if(iTime > 85955) {
+    	    	//if(iTime > 85955) {
     	    		Boolean bBookSuccess = false;
         			Boolean bBookable = false;
         			//로그인하여 쿠키 얻기 시작
@@ -156,24 +165,38 @@ public class AsianaCCBooking
     					    .data("stpoint", "A")
     					    .data("viewflag", "2")
     					    .post();
-
+    				//System.out.println(doc.toString());
     				if(doc.toString().contains("예약은 오전 9시부터 가능합니다.")) {
     					System.out.println("예약은 오전 9시부터 가능합니다.");
     					bBookable = false;
+    				//} else if (doc.toString().contains("09시 부터 예약 가능합니다.")) {
+    				//	System.out.println("예약은 오전 9시부터 가능합니다.");
+    				//	bBookable = false;
     				} else {
     					bBookable = true;
     				}
 
+    				String sRvdate = "";
+    				String sRvtime = "";
+    				String sDateflag = "";
+    				String sHflag = "";
+    				String sNight_flag = "";
+    				String sReservedCourse = "";
+    				String sReservedContent = "";
+    				
         			if(bBookable) {
-        				String sRvdate = "";
-        				String sRvtime = "";
-        				String sDateflag = "";
-        				String sHflag = "";
-        				String sNight_flag = "";
         				
         				//예약 가능한 상태로 해당 일자의 테이블을 조회하여 예약 가능 여부 추가 확인
         				//document 전체의 table을 가져옴
         	    		Elements tablesOnThePage = doc.getElementsByTag("table");
+        	    		if(tablesOnThePage.size() < 11) {
+        		        	//현재시간 구하기 로직 : 컴퓨터 시간임, 따라서 최대한 서버 시간과 맞아야 함, 내 컴퓨터는 거의 동기화 되어있는듯
+        	    	    	SimpleDateFormat logFormat = new SimpleDateFormat ( "yyyyMMdd HH:mm:ss");
+        	    	    	Date dLog = new Date();	    			
+        	    	    	String sLogTime = logFormat.format(dLog);
+        			        System.out.println("["+sLogTime+"] Currently reservation is not available....");
+        	    			continue;
+        	    		}
         	    		// 11번 테이블이 예약 가능 여부 달력임
         	    		Element tableOfCalendar = tablesOnThePage.get(11);
         	    		Elements aTagBookableColumn = tableOfCalendar.getElementsByTag("a");
@@ -207,18 +230,21 @@ public class AsianaCCBooking
         	    					//서코스 우선, 코드는 21
         	    					if(oneATagBookableCourse.toString().contains("ChangeCourse('WOUT')")) {
         	    						if(booking("21", sRvdate, sRvtime, sDateflag, sHflag, sNight_flag)) {
+        	    							sReservedCourse = "WOUT";
         	    							bBookSuccess = true;
         	    							break loop;
         	    						}
         	    					//서코스 없으면 동IN, 코드는 12
         	    					} else if(oneATagBookableCourse.toString().contains("ChangeCourse('EIN')")) {
         	    						if(booking("12", sRvdate, sRvtime, sDateflag, sHflag, sNight_flag)) {
+        	    							sReservedCourse = "EIN";
         	    							bBookSuccess = true;
         	    							break loop;
         	    						}
         	    					//서코스 없으면 동OUT, 코드는 11
         							} else if(oneATagBookableCourse.toString().contains("ChangeCourse('EOUT')")) {
         								if(booking("11", sRvdate, sRvtime, sDateflag, sHflag, sNight_flag)) {
+        	    							sReservedCourse = "EOUT";
         	    							bBookSuccess = true;
         	    							break loop;
         	    						}
@@ -229,20 +255,252 @@ public class AsianaCCBooking
         	    				
         	    			}
         	    		}
-        				
+        	    		
+        	    		if(!bBookSuccess) {
+        	    			loop: 
+            	    		for(int i = 0; i < aTagBookableColumn.size(); i++) {
+            	    			Element oneATagBookableColumn = aTagBookableColumn.get(i);
+            	    			//아래 08이 08시 티옵을 의미함!!!!! 05면 05시대 티옵을 의미함
+            	    			if(oneATagBookableColumn.toString().contains("check_resv('"+"09")) {
+            	    				String sParseString = oneATagBookableColumn.toString();
+            	    				String sParameters = sParseString.substring(sParseString.indexOf("check_resv(")+11, sParseString.indexOf(")\" title=\""));
+
+            	    				sRvdate = sParameters.split(",")[1].replaceAll("'", "");
+            	    				sRvtime = sParameters.split(",")[0].replaceAll("'", "");
+            	    				sDateflag = sParameters.split(",")[2].replaceAll("'", "");
+            	    				sHflag = sParameters.split(",")[3].replaceAll("'", "");
+            	    				sNight_flag = sParameters.split(",")[4].replaceAll("'", "");
+            	    				
+            	    				Document doc3 = Jsoup.connect("https://www.asianacc.co.kr:444/reservation/resv/rvdetail.asp")
+            	    						.cookie(sCookieKey, sCookieValue)
+            	    					    .data("rvdate", sRvdate)
+            	    					    .data("rvtime", sRvtime)
+            	    					    .data("dateflag", sDateflag)
+            	    					    .data("hflag", sHflag)
+            	    					    .data("night_flag", sNight_flag)
+            	    					    .get();
+            	    				
+            	    				Elements aTagBookableCourse = doc3.getElementsByTag("a");
+            	    				for(int j = 0; j < aTagBookableCourse.size(); j++) {
+            	    					Element oneATagBookableCourse = aTagBookableCourse.get(j);
+            	    					
+            	    					//서코스 우선, 코드는 21
+            	    					if(oneATagBookableCourse.toString().contains("ChangeCourse('WOUT')")) {
+            	    						if(booking("21", sRvdate, sRvtime, sDateflag, sHflag, sNight_flag)) {
+            	    							sReservedCourse = "WOUT";
+            	    							bBookSuccess = true;
+            	    							break loop;
+            	    						}
+            	    					//서코스 없으면 동IN, 코드는 12
+            	    					} else if(oneATagBookableCourse.toString().contains("ChangeCourse('EIN')")) {
+            	    						if(booking("12", sRvdate, sRvtime, sDateflag, sHflag, sNight_flag)) {
+            	    							sReservedCourse = "EIN";
+            	    							bBookSuccess = true;
+            	    							break loop;
+            	    						}
+            	    					//서코스 없으면 동OUT, 코드는 11
+            							} else if(oneATagBookableCourse.toString().contains("ChangeCourse('EOUT')")) {
+            								if(booking("11", sRvdate, sRvtime, sDateflag, sHflag, sNight_flag)) {
+            	    							sReservedCourse = "EOUT";
+            	    							bBookSuccess = true;
+            	    							break loop;
+            	    						}
+            							} else {
+            								continue;
+            							}
+            	    				}
+            	    				
+            	    			}
+            	    		}
+    	    			}
+
+        	    		if(!bBookSuccess) {
+        	    			loop: 
+            	    		for(int i = 0; i < aTagBookableColumn.size(); i++) {
+            	    			Element oneATagBookableColumn = aTagBookableColumn.get(i);
+            	    			//아래 08이 08시 티옵을 의미함!!!!! 05면 05시대 티옵을 의미함
+            	    			if(oneATagBookableColumn.toString().contains("check_resv('"+"08")) {
+            	    				String sParseString = oneATagBookableColumn.toString();
+            	    				String sParameters = sParseString.substring(sParseString.indexOf("check_resv(")+11, sParseString.indexOf(")\" title=\""));
+
+            	    				sRvdate = sParameters.split(",")[1].replaceAll("'", "");
+            	    				sRvtime = sParameters.split(",")[0].replaceAll("'", "");
+            	    				sDateflag = sParameters.split(",")[2].replaceAll("'", "");
+            	    				sHflag = sParameters.split(",")[3].replaceAll("'", "");
+            	    				sNight_flag = sParameters.split(",")[4].replaceAll("'", "");
+            	    				
+            	    				Document doc3 = Jsoup.connect("https://www.asianacc.co.kr:444/reservation/resv/rvdetail.asp")
+            	    						.cookie(sCookieKey, sCookieValue)
+            	    					    .data("rvdate", sRvdate)
+            	    					    .data("rvtime", sRvtime)
+            	    					    .data("dateflag", sDateflag)
+            	    					    .data("hflag", sHflag)
+            	    					    .data("night_flag", sNight_flag)
+            	    					    .get();
+            	    				
+            	    				Elements aTagBookableCourse = doc3.getElementsByTag("a");
+            	    				for(int j = 0; j < aTagBookableCourse.size(); j++) {
+            	    					Element oneATagBookableCourse = aTagBookableCourse.get(j);
+            	    					
+            	    					//서코스 우선, 코드는 21
+            	    					if(oneATagBookableCourse.toString().contains("ChangeCourse('WOUT')")) {
+            	    						if(booking("21", sRvdate, sRvtime, sDateflag, sHflag, sNight_flag)) {
+            	    							sReservedCourse = "WOUT";
+            	    							bBookSuccess = true;
+            	    							break loop;
+            	    						}
+            	    					//서코스 없으면 동IN, 코드는 12
+            	    					} else if(oneATagBookableCourse.toString().contains("ChangeCourse('EIN')")) {
+            	    						if(booking("12", sRvdate, sRvtime, sDateflag, sHflag, sNight_flag)) {
+            	    							sReservedCourse = "EIN";
+            	    							bBookSuccess = true;
+            	    							break loop;
+            	    						}
+            	    					//서코스 없으면 동OUT, 코드는 11
+            							} else if(oneATagBookableCourse.toString().contains("ChangeCourse('EOUT')")) {
+            								if(booking("11", sRvdate, sRvtime, sDateflag, sHflag, sNight_flag)) {
+            	    							sReservedCourse = "EOUT";
+            	    							bBookSuccess = true;
+            	    							break loop;
+            	    						}
+            							} else {
+            								continue;
+            							}
+            	    				}
+            	    				
+            	    			}
+            	    		}
+    	    			}
+        	    		if(!bBookSuccess) {
+        	    			loop: 
+            	    		for(int i = 0; i < aTagBookableColumn.size(); i++) {
+            	    			Element oneATagBookableColumn = aTagBookableColumn.get(i);
+            	    			//아래 08이 08시 티옵을 의미함!!!!! 05면 05시대 티옵을 의미함
+            	    			if(oneATagBookableColumn.toString().contains("check_resv('"+"07")) {
+            	    				String sParseString = oneATagBookableColumn.toString();
+            	    				String sParameters = sParseString.substring(sParseString.indexOf("check_resv(")+11, sParseString.indexOf(")\" title=\""));
+
+            	    				sRvdate = sParameters.split(",")[1].replaceAll("'", "");
+            	    				sRvtime = sParameters.split(",")[0].replaceAll("'", "");
+            	    				sDateflag = sParameters.split(",")[2].replaceAll("'", "");
+            	    				sHflag = sParameters.split(",")[3].replaceAll("'", "");
+            	    				sNight_flag = sParameters.split(",")[4].replaceAll("'", "");
+            	    				
+            	    				Document doc3 = Jsoup.connect("https://www.asianacc.co.kr:444/reservation/resv/rvdetail.asp")
+            	    						.cookie(sCookieKey, sCookieValue)
+            	    					    .data("rvdate", sRvdate)
+            	    					    .data("rvtime", sRvtime)
+            	    					    .data("dateflag", sDateflag)
+            	    					    .data("hflag", sHflag)
+            	    					    .data("night_flag", sNight_flag)
+            	    					    .get();
+            	    				
+            	    				Elements aTagBookableCourse = doc3.getElementsByTag("a");
+            	    				for(int j = 0; j < aTagBookableCourse.size(); j++) {
+            	    					Element oneATagBookableCourse = aTagBookableCourse.get(j);
+            	    					
+            	    					//서코스 우선, 코드는 21
+            	    					if(oneATagBookableCourse.toString().contains("ChangeCourse('WOUT')")) {
+            	    						if(booking("21", sRvdate, sRvtime, sDateflag, sHflag, sNight_flag)) {
+            	    							sReservedCourse = "WOUT";
+            	    							bBookSuccess = true;
+            	    							break loop;
+            	    						}
+            	    					//서코스 없으면 동IN, 코드는 12
+            	    					} else if(oneATagBookableCourse.toString().contains("ChangeCourse('EIN')")) {
+            	    						if(booking("12", sRvdate, sRvtime, sDateflag, sHflag, sNight_flag)) {
+            	    							sReservedCourse = "EIN";
+            	    							bBookSuccess = true;
+            	    							break loop;
+            	    						}
+            	    					//서코스 없으면 동OUT, 코드는 11
+            							} else if(oneATagBookableCourse.toString().contains("ChangeCourse('EOUT')")) {
+            								if(booking("11", sRvdate, sRvtime, sDateflag, sHflag, sNight_flag)) {
+            	    							sReservedCourse = "EOUT";
+            	    							bBookSuccess = true;
+            	    							break loop;
+            	    						}
+            							} else {
+            								continue;
+            							}
+            	    				}
+            	    				
+            	    			}
+            	    		}
+    	    			}
+        	    		if(!bBookSuccess && aTagBookableColumn.size() != 0) {
+	        	    		Element oneATagBookableColumn = aTagBookableColumn.get(0);
+    	    				String sParseString = oneATagBookableColumn.toString();
+    	    				String sParameters = sParseString.substring(sParseString.indexOf("check_resv(")+11, sParseString.indexOf(")\" title=\""));
+
+    	    				sRvdate = sParameters.split(",")[1].replaceAll("'", "");
+    	    				sRvtime = sParameters.split(",")[0].replaceAll("'", "");
+    	    				sDateflag = sParameters.split(",")[2].replaceAll("'", "");
+    	    				sHflag = sParameters.split(",")[3].replaceAll("'", "");
+    	    				sNight_flag = sParameters.split(",")[4].replaceAll("'", "");
+    	    				
+    	    				Document doc3 = Jsoup.connect("https://www.asianacc.co.kr:444/reservation/resv/rvdetail.asp")
+    	    						.cookie(sCookieKey, sCookieValue)
+    	    					    .data("rvdate", sRvdate)
+    	    					    .data("rvtime", sRvtime)
+    	    					    .data("dateflag", sDateflag)
+    	    					    .data("hflag", sHflag)
+    	    					    .data("night_flag", sNight_flag)
+    	    					    .get();
+    	    				
+    	    				Elements aTagBookableCourse = doc3.getElementsByTag("a");
+    	    				for(int j = 0; j < aTagBookableCourse.size(); j++) {
+    	    					Element oneATagBookableCourse = aTagBookableCourse.get(j);
+    	    					
+    	    					//서코스 우선, 코드는 21
+    	    					if(oneATagBookableCourse.toString().contains("ChangeCourse('WOUT')")) {
+    	    						if(booking("21", sRvdate, sRvtime, sDateflag, sHflag, sNight_flag)) {
+    	    							sReservedCourse = "WOUT";
+    	    							bBookSuccess = true;
+    	    					}
+    	    					//서코스 없으면 동IN, 코드는 12
+    	    					} else if(oneATagBookableCourse.toString().contains("ChangeCourse('EIN')")) {
+    	    						if(booking("12", sRvdate, sRvtime, sDateflag, sHflag, sNight_flag)) {
+    	    							sReservedCourse = "EIN";
+    	    							bBookSuccess = true;
+    	    						}
+    	    					//서코스 없으면 동OUT, 코드는 11
+    							} else if(oneATagBookableCourse.toString().contains("ChangeCourse('EOUT')")) {
+    								if(booking("11", sRvdate, sRvtime, sDateflag, sHflag, sNight_flag)) {
+    	    							sReservedCourse = "EOUT";
+    	    							bBookSuccess = true;
+    	    						}
+    							} else {
+    								continue;
+    							}
+    	    				}
+        	    		}
         			} 
         			
     	    		//성공시
     	    		if(bBookSuccess) {	    			
-    	    	    	return "Booking success!!! End booking";
+    	    			sendMail(sRvdate, sRvtime, sReservedCourse, "아시아나CC 예약성공");
+    		        	//현재시간 구하기 로직 : 컴퓨터 시간임, 따라서 최대한 서버 시간과 맞아야 함, 내 컴퓨터는 거의 동기화 되어있는듯
+    	    	    	SimpleDateFormat logFormat = new SimpleDateFormat ( "yyyyMMdd HH:mm:ss");
+    	    	    	Date dLog = new Date();	    			
+    	    	    	String sLogTime = logFormat.format(dLog);
+    			        System.out.println("["+sLogTime+"] Booking success!!! End booking....");
+    	    	    	return "["+sLogTime+"] Booking success!!! End booking....";
     	    		} else {
-    	    			System.out.println("Booking is not available... try again in 1 seconds");
-    	    			Thread.sleep(1000);
+    			        int iRandom = (int) (Math.round(Math.random()*100));
+
+    		        	//현재시간 구하기 로직 : 컴퓨터 시간임, 따라서 최대한 서버 시간과 맞아야 함, 내 컴퓨터는 거의 동기화 되어있는듯
+    	    	    	SimpleDateFormat logFormat = new SimpleDateFormat ( "yyyyMMdd HH:mm:ss");
+    	    	    	Date dLog = new Date();	    			
+    	    	    	String sLogTime = logFormat.format(dLog);
+    			        System.out.println("["+sLogTime+"] All available booking date has reserved... trying again in " +iRandom + "ms...");
+    			        Thread.sleep(iRandom);    	    	    	
+    	    			continue;
     	    		}
-    	    	} else {
-    	    		System.out.println("It's not booking time. after 0859, it will start!!!!!!");
+    	    	//} else {
+    	    		//System.out.println("It's not booking time. after 0859, it will start!!!!!!");
     	    		
-    	    		Thread.sleep(1000);
+    	    		//Thread.sleep(100);
         	    	/*
     	    		SimpleDateFormat detailformat = new SimpleDateFormat ( "yyyyMMddHHmmss");
         	    	SimpleDateFormat yyyyMMddformat = new SimpleDateFormat ( "yyyyMMdd");
@@ -262,12 +520,16 @@ public class AsianaCCBooking
     	    			Thread.sleep(1000);
     	    		}
     	    		*/
-    	    	}
+    	    	//}
     		}
     	} catch (Exception e) {
     	    // Exp : Connection Fail
     	    e.printStackTrace();
+    	    System.out.println("Exception occured... try again");
+    	    bookAsianaCC40daysFromNow(false, sTargetTeeOfftime, sTargetTeeOffDate);
     	    return "booking failed with exception";
+    	} finally {
+    		return "booking finished";
     	}
     }
 
@@ -352,4 +614,45 @@ public class AsianaCCBooking
 		}
 	}
 
+	static String user = "lchangoo@naver.com"; // 패스워드 
+	static String password = "Cksrn0604!";      
+
+	public static Boolean sendMail(String sReservedDate, String sReservedTime, String sReservedCourse, String sReservedContent) {
+		String host = "smtp.naver.com"; // 네이버일 경우 네이버 계정, gmail경우 gmail 계정 
+		// SMTP 서버 정보를 설정한다. 
+		Properties props = new Properties(); 
+		props.put("mail.smtp.host", host); 
+		props.put("mail.smtp.port", 587); 
+		props.put("mail.smtp.auth", "true"); 
+
+		Session session = Session.getDefaultInstance(props, new javax.mail.Authenticator() { 
+			protected PasswordAuthentication getPasswordAuthentication() { 
+				return new PasswordAuthentication(user, password); 
+			} 
+		}); 
+		try { 
+			MimeMessage message = new MimeMessage(session);
+			message.setFrom(new InternetAddress(user)); 
+			
+			InternetAddress[] addArray = new InternetAddress[2]; 
+			addArray[0] = new InternetAddress("lchangoo@gmail.com"); 
+			addArray[1] = new InternetAddress("stanhan@hotmail.com"); 
+			message.addRecipients(Message.RecipientType.TO, addArray);
+
+			
+			// 메일 제목 
+			message.setSubject("아시아나CC 예약 완료 : 일자 [" +sReservedDate+ "], 티옵 [" + sReservedTime + "], 코스 [" + sReservedCourse + "]"); 
+			
+			// 메일 내용 
+			message.setText("아시아나CC 예약 완료 : 일자 [" +sReservedDate+ "], 티옵 [" + sReservedTime + "], 코스 [" + sReservedCourse + "] \rn" +  sReservedContent); 
+			
+			// send the message 
+			Transport.send(message); 
+			System.out.println("Success Message Send"); 
+		} catch (MessagingException e) { 
+			e.printStackTrace(); 
+		}
+		return true;
+	}
+	
 }
