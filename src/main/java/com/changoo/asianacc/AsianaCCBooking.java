@@ -33,29 +33,6 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
-/**
- * Hello world!
- *
- */
-class Thread4p1 extends Thread {
-  //  run() 메서드 오버라이딩
-	public void run() {
-    //스레드에서 실행할 작업
-    	try {
-    		//첫 번째 파라미터 - 주중 : false, 주말 : true
-    		//두 번째 파라미터 - 시간대 08시 : 08, 09시 : 09 (08시에서 가까운 순서대로 예약)
-    		//ex) AsianaCCBooking.bookAsianaCC40daysFromNow(주중주말, 목표티옵시간, 목표 날짜-지워버리면 예약 가능한 마지막 날짜 예약)
-    		//ex) System.out.println(AsianaCCBooking.bookAsianaCC40daysFromNow(false, "08", ""));  <<이렇게 하면 자동 예약됨
-    		//ex) System.out.println(AsianaCCBooking.bookAsianaCC40daysFromNow(false, "08", "20220311"));  <<이렇게 하면 주중 주말 무시하고 해당 일자 시간에 예약됨
-			System.out.println(AsianaCCBooking.bookAsianaCC40daysFromNow(false, "09", "20220406"));
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	}
-}
-
-
 public class AsianaCCBooking 
 {
     @SuppressWarnings("deprecation")
@@ -63,8 +40,16 @@ public class AsianaCCBooking
     {   
 
     	System.out.println("Auto AsianaCC booking start!!!!!!");
+    	/*
 		Thread4p1 t1 = new Thread4p1();
-		t1.start();     	
+		t1.start();
+		*/
+    	//첫 번째 파라미터 - 주중 : false, 주말 : true
+		//두 번째 파라미터 - 시간대 08시 : 08, 09시 : 09 (08시에서 가까운 순서대로 예약)
+		//ex) AsianaCCBooking.bookAsianaCC40daysFromNow(주중주말, 목표티옵시간, 목표 날짜-지워버리면 예약 가능한 마지막 날짜 예약)
+		//ex) System.out.println(AsianaCCBooking.bookAsianaCC40daysFromNow(false, "08", ""));  <<이렇게 하면 자동 예약됨
+		//ex) System.out.println(AsianaCCBooking.bookAsianaCC40daysFromNow(false, "08", "20220311"));  <<이렇게 하면 주중 주말 무시하고 해당 일자 시간에 예약됨
+		System.out.println(AsianaCCBooking.bookAsianaCC40daysFromNow(false, "09", "20220421"));
     }
     
     /********************************************************************************************************************************************************************************************
@@ -72,10 +57,15 @@ public class AsianaCCBooking
      * 파라미터 첫 번째 주중 예약할건지 주말 예약할건지 선택
      * 8시 근처로 예약
      ********************************************************************************************************************************************************************************************/
+    
+    static String TargetTeeOfftime = "";
+    static String TargetTeeOffDate = "";
     static String sCookieKey = "";
 	static String sCookieValue = "";
     public static String bookAsianaCC40daysFromNow(Boolean bWeekend, String sTargetTeeOfftime, String sTargetTeeOffDate) throws InterruptedException {
     	try {
+    		TargetTeeOfftime = sTargetTeeOfftime;
+    	    TargetTeeOffDate = sTargetTeeOffDate;
     		while(true) {
     	    	//현재시간 구하기 로직 : 컴퓨터 시간임, 따라서 최대한 서버 시간과 맞아야 함, 내 컴퓨터는 거의 동기화 되어있는듯
     	    	SimpleDateFormat format = new SimpleDateFormat ( "HHmmss");
@@ -526,7 +516,7 @@ public class AsianaCCBooking
     	    // Exp : Connection Fail
     	    e.printStackTrace();
     	    System.out.println("Exception occured... try again");
-    	    bookAsianaCC40daysFromNow(false, sTargetTeeOfftime, sTargetTeeOffDate);
+    	    bookAsianaCC40daysFromNow(false, TargetTeeOfftime, TargetTeeOffDate);
     	    return "booking failed with exception";
     	} finally {
     		return "booking finished";
