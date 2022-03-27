@@ -1,14 +1,9 @@
 package com.changoo.asianacc;
 
-import java.io.IOException;
-import java.net.URL;
-import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Date;
 import java.util.Properties;
-import java.util.regex.Pattern;
 
 import javax.mail.Message;
 import javax.mail.MessagingException;
@@ -22,10 +17,9 @@ import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.HttpClient;
-import org.apache.http.client.ResponseHandler;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.HttpPost;
-import org.apache.http.impl.client.BasicResponseHandler;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.message.BasicNameValuePair;
 import org.jsoup.Jsoup;
@@ -78,6 +72,7 @@ public class AsianaCCBooking
     	    		Boolean bBookSuccess = false;
         			Boolean bBookable = false;
         			//로그인하여 쿠키 얻기 시작
+        			System.out.println("Login page open...");
     				String requestURL = "https://www.asianacc.co.kr:444/reservation/mbr/melogin.asp";
     				HttpClient client = HttpClientBuilder.create().build(); // HttpClient 생성
     				HttpPost postRequest = new HttpPost(requestURL); //POST 메소드 URL 새성 
@@ -85,6 +80,13 @@ public class AsianaCCBooking
     				postRequest.setHeader("Connection", "keep-alive");
     				postRequest.setHeader("Content-Type", "application/x-www-form-urlencoded");
     				
+    				//post request 에 타임아웃 설정
+    				RequestConfig requestConfig = RequestConfig.custom()
+    		                .setConnectTimeout(5000)
+    		                .setConnectionRequestTimeout(5000)
+    		                .build();
+    				postRequest.setConfig(requestConfig);
+    		        
     			    ArrayList<NameValuePair> postParameters;
     			    	
     			    postParameters = new ArrayList<NameValuePair>();
@@ -110,11 +112,14 @@ public class AsianaCCBooking
     					}
     				}
     				//로그인하여 쿠키 얻기 종료
-    				
+    				System.out.println("Login trying...");
     				//예약 가능 날짜를 구하기 위한 날짜별 예약 화면 호출
     				Document doc2 = Jsoup.connect("https://www.asianacc.co.kr:444/reservation/resv/rvstatus_n.asp")
     					    .cookie(sCookieKey, sCookieValue)
+    					    //로그인 시 timeout 5초
+    					    .timeout(5000)
     					    .get();
+    				System.out.println("Login succeeded...");
     				//예약 가능 평일 년월일 구하기
     				String sWeekdayYear = "";
     				String sWeekdayMonth = "";
@@ -145,7 +150,7 @@ public class AsianaCCBooking
     					sWeekendMonth = sTargetTeeOffDate.substring(4,6);
     					sWeekendDay = sTargetTeeOffDate.substring(6,8);
     				}
-    				
+    				System.out.println("Booking list retrieve...");
     				//예약 조회 시작
     				Document doc = Jsoup.connect("https://www.asianacc.co.kr:444/reservation/resv/rvstatus_n.asp")
     						.cookie(sCookieKey, sCookieValue)
@@ -203,7 +208,7 @@ public class AsianaCCBooking
         	    				sDateflag = sParameters.split(",")[2].replaceAll("'", "");
         	    				sHflag = sParameters.split(",")[3].replaceAll("'", "");
         	    				sNight_flag = sParameters.split(",")[4].replaceAll("'", "");
-        	    				
+        	    				System.out.println("444444444444");
         	    				Document doc3 = Jsoup.connect("https://www.asianacc.co.kr:444/reservation/resv/rvdetail.asp")
         	    						.cookie(sCookieKey, sCookieValue)
         	    					    .data("rvdate", sRvdate)
@@ -260,7 +265,7 @@ public class AsianaCCBooking
             	    				sDateflag = sParameters.split(",")[2].replaceAll("'", "");
             	    				sHflag = sParameters.split(",")[3].replaceAll("'", "");
             	    				sNight_flag = sParameters.split(",")[4].replaceAll("'", "");
-            	    				
+            	    				System.out.println("555555555555555");
             	    				Document doc3 = Jsoup.connect("https://www.asianacc.co.kr:444/reservation/resv/rvdetail.asp")
             	    						.cookie(sCookieKey, sCookieValue)
             	    					    .data("rvdate", sRvdate)
@@ -318,7 +323,7 @@ public class AsianaCCBooking
             	    				sDateflag = sParameters.split(",")[2].replaceAll("'", "");
             	    				sHflag = sParameters.split(",")[3].replaceAll("'", "");
             	    				sNight_flag = sParameters.split(",")[4].replaceAll("'", "");
-            	    				
+            	    				System.out.println("66666666666");
             	    				Document doc3 = Jsoup.connect("https://www.asianacc.co.kr:444/reservation/resv/rvdetail.asp")
             	    						.cookie(sCookieKey, sCookieValue)
             	    					    .data("rvdate", sRvdate)
@@ -375,7 +380,7 @@ public class AsianaCCBooking
             	    				sDateflag = sParameters.split(",")[2].replaceAll("'", "");
             	    				sHflag = sParameters.split(",")[3].replaceAll("'", "");
             	    				sNight_flag = sParameters.split(",")[4].replaceAll("'", "");
-            	    				
+            	    				System.out.println("7777777777777");
             	    				Document doc3 = Jsoup.connect("https://www.asianacc.co.kr:444/reservation/resv/rvdetail.asp")
             	    						.cookie(sCookieKey, sCookieValue)
             	    					    .data("rvdate", sRvdate)
@@ -428,7 +433,7 @@ public class AsianaCCBooking
     	    				sDateflag = sParameters.split(",")[2].replaceAll("'", "");
     	    				sHflag = sParameters.split(",")[3].replaceAll("'", "");
     	    				sNight_flag = sParameters.split(",")[4].replaceAll("'", "");
-    	    				
+    	    				System.out.println("888888888888888");
     	    				Document doc3 = Jsoup.connect("https://www.asianacc.co.kr:444/reservation/resv/rvdetail.asp")
     	    						.cookie(sCookieKey, sCookieValue)
     	    					    .data("rvdate", sRvdate)
