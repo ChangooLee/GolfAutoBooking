@@ -155,7 +155,7 @@ public class OwnersGCBooking {
 			        String sYear = sLastBookingElement.substring(sLastBookingElement.indexOf("JavaScript:Date_Click('")+23,sLastBookingElement.indexOf("JavaScript:Date_Click('")+27);
 		        	String sMonth = sLastBookingElement.substring(sLastBookingElement.indexOf("JavaScript:Date_Click('")+30,sLastBookingElement.indexOf("JavaScript:Date_Click('")+32);
 		        	String sDate = sLastBookingElement.substring(sLastBookingElement.indexOf("JavaScript:Date_Click('")+35,sLastBookingElement.indexOf("JavaScript:Date_Click('")+37);
-			        sNextWeek = sYear + sMonth + sDate;
+			        //sNextWeek = sYear + sMonth + sDate;
 			        //sNextWeek = "20220302";
 			        for(int i=0; i < eBookingElementsList.size(); i++) {
 			        	String sBookingDate = eBookingElementsList.get(i).toString();
@@ -404,6 +404,58 @@ public class OwnersGCBooking {
 						    			break;
 				    				}
 			    				}
+			    				//05시 가까운순 예약
+			    				for(int k=0; k < eRevElementsList.size(); k++) {
+				    				Element eRevElement = eRevElementsList.get(k);
+				    				String sRevElementTemp = eRevElement.toString();
+				    				String[] sRevElement = sRevElementTemp.substring(sRevElementTemp.indexOf("Confirm1(")+9, sRevElementTemp.indexOf(");\"")).split(",");
+				    				//function Book_Confirm1 (i_date, i_week,  i_crs, i_crs_name, i_time) {
+				    				/*
+										obj.book_date_a.value = i_date;
+										obj.book_crs.value = i_crs;
+										obj.book_crs_name.value = i_crs_name;
+										obj.book_time.value = i_time;
+										obj.action = 'reservation_01_02.asp';
+				    				 */
+				    				String sBookingTime = sRevElement[4].substring(1, 3);
+				    				if(sBookingTime.equals("05")) {
+					    				data = new HashMap<String, String>();
+						    			data.put("book_date_a", sRevElement[0].replaceAll("'", ""));
+						    			data.put("book_crs", sRevElement[2].replaceAll("'", ""));
+						    			data.put("book_crs_name", sRevElement[3].replaceAll("'", ""));
+						    			data.put("book_time", sRevElement[4].replaceAll("'", ""));	
+						    			
+						    			Document reserveCompleteDocument = Jsoup.connect("https://www.ownersgc.co.kr/html/reservation/reservation_01_02.asp")
+						                        .header("Accept", "text/html, application/xhtml+xml, image/jxr, */*")
+						                        .header("Referer", "https://www.ownersgc.co.kr/html/reservation/reservation_01_01.asp")
+						                        .header("Accept-Language", "ko-KR")
+						                        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; WOW64; Trident/7.0; rv:11.0) like Gecko")
+						                        .header("Accept-Encoding", "gzip, deflate")
+						                        .header("Host", "www.ownersgc.co.kr")
+						                        .header("Connection", "Keep-Alive")
+						                        .cookies(loginCookie) // 위에서 얻은 '로그인 된' 쿠키
+						                        .data(data)
+						    				    .post();
+						    			
+						    			reserveCompleteDocument = Jsoup.connect("https://www.ownersgc.co.kr/html/reservation/reservation_01_03.asp")
+						                        .header("Accept", "text/html, application/xhtml+xml, image/jxr, */*")
+						                        .header("Referer", "https://www.ownersgc.co.kr/html/reservation/reservation_01_02.asp")
+						                        .header("Accept-Language", "ko-KR")
+						                        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; WOW64; Trident/7.0; rv:11.0) like Gecko")
+						                        .header("Accept-Encoding", "gzip, deflate")
+						                        .header("Host", "www.ownersgc.co.kr")
+						                        .header("Connection", "Keep-Alive")
+						                        .cookies(loginCookie) // 위에서 얻은 '로그인 된' 쿠키
+						                        .data(data)
+						    				    .post();
+						    			System.out.println(reserveCompleteDocument);
+						    			sendMail(sPossibleBookingDate, sRevElement[4].replaceAll("'", ""), sRevElement[3].replaceAll("'", ""), reserveCompleteDocument.toString());
+						    			bNotFinish = false;
+						    			bSucc = true;
+						    			break;
+				    				}
+			    				}
+			    				
 			    				//그 외
 			    				for(int k=0; k < eRevElementsList.size(); k++) {
 				    				Element eRevElement = eRevElementsList.get(k);
